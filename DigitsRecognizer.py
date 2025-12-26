@@ -1,6 +1,6 @@
 import pandas as pd
 import tensorflow as tf
-from keras.utils.np_utils import to_categorical
+from keras.utils import to_categorical
 train = pd.read_csv("c:/Users/dubst/Downloads/digit-recognizer/train.csv")
 train.head()
 
