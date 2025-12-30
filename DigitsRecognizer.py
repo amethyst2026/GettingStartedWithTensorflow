@@ -1,7 +1,10 @@
 import pandas as pd
 import tensorflow as tf
 from keras.utils import to_categorical
-train = pd.read_csv("c:/Users/dubst/Downloads/digit-recognizer/train.csv")
+data = tf.keras.datasets.mnist.load_data()
+df = pd.DataFrame(data)
+df.to_csv('mnist.csv')
+train = pd.read_csv("")
 train.head()
 
 test = pd.read_csv("c:/Users/dubst/Downloads/digit-recognizer/test.csv")
@@ -47,7 +50,7 @@ model.add(GlobalAveragePooling2D())
 model.add(tf.keras.layers.Dense(256,activation=tf.nn.relu6))
 model.add(tf.keras.layers.Dense(10,activation='softmax'))
 
-model.compile(loss='categorical_crossentropy',optimizer=tf.keras.optimizers.Adam(learning_rate=10e-4),metrics = ['accuracy'])
+model.compile(loss='categorical_crossentropy',optimizer=tf.keras.optimizers.Adam(learning_rate=10e-5),metrics = ['accuracy'])
 
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 

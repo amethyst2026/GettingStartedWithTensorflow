@@ -1,3 +1,4 @@
+from __future__ import print_function
 import tensorflow as tf
 import keras
 from keras import datasets, regularizers
@@ -6,7 +7,21 @@ from tensorflow.keras.optimizers import Adam, SGD
 from matplotlib import pyplot as plt
 from tensorflow.data import Dataset
 import tensorflow.keras.datasets
+from absl import app as absl_app
+from absl import flags
+from tensorflow_model_optimization.python.core.keras.compat import keras
+from tensorflow_model_optimization.python.core.sparsity.keras import prune
+from tensorflow_model_optimization.python.core.sparsity.keras import pruning_callbacks
+from tensorflow_model_optimization.python.core.sparsity.keras import pruning_schedule
+from tensorflow_model_optimization.python.core.sparsity.keras.pruning_schedule import PolynomialDecay
 
+PolynomialDecay = pruning_schedule.PolynomialDecay
+
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_string('output_dir', '/tmp/mnist_train/',
+                    'Output directory to hold tensorboard events')
 
 mnist = datasets.mnist
 (train_images, train_labels), (test_images, test_labels) = mnist.load_data()
@@ -24,9 +39,9 @@ class MyModel(keras.Model):
     def __init__(self):
         super(MyModel, self).__init__()
 
-        self.conv2 = Conv2D(64,(3,3),padding='same',activation='relu',kernel_initializer='he_normal', use_bias=True, strides=(2,2),kernel_regularizer=regularizers.l2(0.01),bias_initializer='he_normal',bias_regularizer=regularizers.l2(0.01))
+        self.conv2 = Conv2D(64,(3,3),padding='same',activation='relu6',kernel_initializer='he_normal', use_bias=True, strides=(2,2),kernel_regularizer=regularizers.l2(0.01),bias_initializer='he_normal',bias_regularizer=regularizers.l2(0.01))
         self.dropout2 = Dropout(0.5)
-        self.batchnorm2 = BatchNormalization()
+        self.batchnorm2 = BatchNormalization(axis=-1)
         self.pool2 = MaxPooling2D(pool_size=(2,2),strides=(2,2))
         self.flatten2 = Flatten()
         self.dense4 = Dense(512,activation='relu',kernel_initializer='he_normal')
@@ -47,9 +62,9 @@ class MyModel(keras.Model):
 class ConvLayer2(MyModel):
     def __init__(self):
         super(ConvLayer2, self).__init__()
-        self.conv3 = Conv2D(64, (3,3), padding = 'same', activation = 'relu', kernel_initializer='he_normal', kernel_regularizer=regularizers.l2(0.01), bias_initializer='he_normal',use_bias = True, strides=(2,2))
+        self.conv3 = Conv2D(64, (3,3), padding = 'same', activation = 'relu6', kernel_initializer='he_normal', kernel_regularizer=regularizers.l2(0.01), bias_initializer='he_normal',use_bias = True, strides=(2,2))
         self.dropout3 = Dropout(0.5)
-        self.batchnorm3 = BatchNormalization()
+        self.batchnorm3 = BatchNormalization(axis=-1)
         self.pool3 = MaxPooling2D(pool_size=(2,2),strides=(2,2))
         self.flatten3 = Flatten()
         self.dense7 = Dense(512,activation='relu',kernel_initializer='he_normal')
@@ -83,11 +98,12 @@ def train_step(images, labels):
     with tf.GradientTape() as tape:
         predictions = model(images, training = True)
         loss = loss_object(labels, predictions)
-    gradients = tape.gradient(loss, model.trainable_variables)
-    optimizer.apply_gradients(zip(gradients, model.trainable_variables))
 
-    train_loss.update_state(loss)
-    train_accuracy.update_state(labels, predictions)
+        gradients = tape.gradient(loss, model.trainable_variables)
+        optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+
+        train_loss.update_state(loss)
+        train_accuracy.update_state(labels, predictions)
 
 @tf.function
 def test_step(images, labels):
@@ -120,3 +136,5 @@ for epoch in range(EPOCHS):
         f'Test Loss: {test_loss.result():0.2f}, '
         f'Test Accuracy: {test_accuracy.result() * 100:0.2f}'
     )
+model.compile(optimizer=optimizer, loss=train_loss, metrics=[train_accuracy, test_loss, test_accuracy], run_eagerly=True,verbose=1)
+model.summary()
